@@ -1,0 +1,118 @@
+name: PWA Deploy
+
+# Builds the PWA from github-social/ and deploys the output to
+# frenzypenguin-media.github.io/github-social/ (GitHub Pages).
+#
+# Flow:
+#   1. Check out github-social (source)
+#   2. npm install + npm run build:pwa  →  dist-pwa/
+#   3. Check out frenzypenguin-media.github.io (target site)
+#   4. rsync/copy dist-pwa/ → frenzypenguin-media.github.io/github-social/
+#   5. Commit to frenzypenguin-media.github.io (GitHub Pages serves from main branch)
+#
+# NOTE: This workflow requires a GITHUB_TOKEN with write access to BOTH repos.
+# Set up a GitHub App token or personal access token with `repo` scope on both
+# orgs if the default GITHUB_TOKEN only covers the source repo.
+#
+# GitHub Actions vars/secrets needed:
+#   GH_PAGES_TOKEN  — token with write access to frenzypenguin-media.github.io
+#                     (not required if GITHUB_TOKEN covers both repos)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "package.json"
+      - "vite.config.ts"
+      - ".github/workflows/pwa-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # ── 1. Build source ────────────────────────────────────────────────────────
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build PWA
+        run: npm run build:pwa
+
+      - name: Build embed (drop-in widget for third-party sites)
+        run: npm run build:embed
+
+      - name: Verify dist-pwa exists
+        run: |
+          if [ ! -d dist-pwa ]; then
+            echo "::error::dist-pwa/ not produced — check npm run build:pwa"
+            exit 1
+          fi
+          if [ ! -d dist-embed ]; then
+            echo "::error::dist-embed/ not produced — check npm run build:embed"
+            exit 1
+          fi
+          echo "Built PWA files:"
+          ls dist-pwa/ | head -20
+          echo "Built embed files:"
+          ls dist-embed/ | head -20
+
+      # ── 2. Deploy to GitHub Pages site ──────────────────────────────────────────
+      - name: Checkout GitHub Pages site
+        uses: actions/checkout@v4
+        with:
+          repository: frenzypenguin-media/frenzypenguin-media.github.io
+          path: site-target
+          token: ${{ secrets.GH_PAGES_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Copy PWA build to site
+        run: |
+          mkdir -p site-target/github-social
+          # Remove old PWA output first to handle deletions
+          rm -rf site-target/github-social/*
+          cp -r dist-pwa/* site-target/github-social/
+          # Embed bundles (web component + drop-in script) live at the site root
+          # so they can be loaded via a single stable URL:
+          #   https://frenzypenguin-media.github.io/embed.js         (ES module)
+          #   https://frenzypenguin-media.github.io/embed.iife.js   (IIFE — <script src>)
+          cp dist-embed/embed.js site-target/embed.js
+          cp dist-embed/embed.iife.js site-target/github-social/embed.js
+          cp dist-embed/embed.js site-target/github-social/embed.js
+          # GitHub Pages runs Jekyll which strips files starting with `_`.
+          # Vite's workbox build outputs hashed assets to `_nuxt/`. Without this
+          # file, Jekyll silently deletes the entire PWA JS/CSS cache.
+          touch site-target/.nojekyll
+          echo "Deployed files:"
+          ls site-target/github-social/ | head -20
+          echo "Site-root files:"
+          ls site-target/embed.js 2>/dev/null && echo "embed.js deployed" || echo "embed.js MISSING"
+
+      - name: Commit and push to GitHub Pages
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAGES_TOKEN || github.token }}
+        run: |
+          cd site-target
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add github-social/ .nojekyll
+          if git diff --staged --quiet; then
+            echo "No changes to deploy"
+          else
+            git status --short
+            git commit -m "build(pwa): deploy $(date -u +%Y-%m-%dT%H:%M:%S)"
+            git push
+            echo "::notice::PWA deployed to frenzypenguin-media.github.io/github-social/"
+          fi

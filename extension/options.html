@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GitHub Social — Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>GitHub Social</h1>
+      <p class="version">v0.2.0 — Decentralized social on GitHub</p>
+    </header>
+
+    <!-- Journey Events -->
+    <section class="section">
+      <h2>Journey Log Events</h2>
+      <p class="desc">Choose which events to record in your GitHubSocial.md journey log.</p>
+      <div class="checkboxes">
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev-visit" checked />
+          <span class="ev-label">Profile visits</span>
+          <span class="ev-hint">Logged when you visit a GitHub profile page</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev-heart" checked />
+          <span class="ev-label">Heart reactions</span>
+          <span class="ev-hint">Logged when you give a ♥ to a profile</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev-reaction" checked />
+          <span class="ev-label">Issue reactions</span>
+          <span class="ev-hint">Logged when you react to an invite/reaction issue</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev-comment" checked />
+          <span class="ev-label">Comments</span>
+          <span class="ev-hint">Logged when you leave a comment on an invite/reaction issue</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Rate Limiting -->
+    <section class="section">
+      <h2>Rate Limiting</h2>
+      <p class="desc">Protect your GitHub account from automated abuse. Messages above this cap are silently dropped.</p>
+      <div class="field-row">
+        <label for="rate-cap">Messages per day</label>
+        <input type="number" id="rate-cap" min="1" max="100" value="10" />
+      </div>
+    </section>
+
+    <!-- Journey Repo -->
+    <section class="section">
+      <h2>Journey Repository</h2>
+      <p class="desc">The repo where your GitHubSocial.md lives. Format: <code>owner/repo</code></p>
+      <div class="field-row">
+        <input type="text" id="journey-repo" placeholder="octocat/github-social" />
+      </div>
+    </section>
+
+    <!-- Token -->
+    <section class="section">
+      <h2>Personal Access Token</h2>
+      <p class="desc">Stored locally in <code>chrome.storage.local</code>. Never sent to third parties.</p>
+      <div class="token-display" id="token-display">
+        <span id="token-value">Not configured</span>
+      </div>
+      <div class="actions">
+        <button class="btn secondary" id="test-token-btn">Test Token</button>
+        <button class="btn danger" id="clear-token-btn">Clear Token</button>
+      </div>
+      <div class="msg" id="token-msg"></div>
+    </section>
+
+    <!-- Storage -->
+    <section class="section">
+      <h2>Storage</h2>
+      <p class="desc">Journey log entries are stored in <code>chrome.storage.local</code>.</p>
+      <div class="storage-info">
+        <span>Journey entries: <strong id="journey-count">—</strong></span>
+        <span>Oldest: <strong id="journey-oldest">—</strong></span>
+      </div>
+      <button class="btn danger" id="clear-journey-btn">Clear Journey Log</button>
+    </section>
+
+    <!-- About -->
+    <section class="section about">
+      <p>GitHub Social is a decentralized social layer built on GitHub Issues and Gists.
+        No server. No account. Just you and your PAT.</p>
+      <p><a href="https://github.com/neohiro/github-social" target="_blank">Source on GitHub</a> · <a href="https://github.com/sponsors/neohiro" target="_blank">♥ Sponsor neohiro</a></p>
+    </section>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

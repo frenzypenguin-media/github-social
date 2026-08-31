@@ -1,0 +1,29 @@
+[package]
+name = "github-social"
+version = "0.2.0"
+description = "GitHub Social — Decentralized GUI Client"
+authors = ["neohiro"]
+edition = "2021"
+
+[lib]
+name = "github_social_lib"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dev-dependencies]
+tauri-build = { version = "2.0", features = [] }
+tokio = { version = "1", features = ["rt", "macros"] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+http = "1"
+octocrab = { version = "0.43", default-features = false, features = ["rustls", "rustls-ring", "stream", "default-client"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

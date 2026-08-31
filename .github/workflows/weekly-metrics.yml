@@ -1,0 +1,153 @@
+name: Weekly Metrics
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  generate-metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Read weekly metrics issue
+        id: read_metrics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.rest.issues.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              labels: ['weekly-metrics'],
+              per_page: 1,
+            });
+            const issue = issues.data[0];
+            const body = issue ? issue.body : '';
+            const number = issue ? String(issue.number) : '';
+            core.setOutput('latest_body', body);
+            core.setOutput('latest_number', number);
+            core.setOutput('weekly_visits', (body.match(/weekly_visits:\s*(\d+)/) || [])[1] || '0');
+            core.setOutput('weekly_hearts', (body.match(/weekly_hearts:\s*(\d+)/) || [])[1] || '0');
+            core.setOutput('weekly_reactions', (body.match(/weekly_reactions:\s*(\d+)/) || [])[1] || '0');
+            core.setOutput('weekly_new_users', (body.match(/weekly_new_users:\s*(\d+)/) || [])[1] || '0');
+            core.setOutput('unique_visits', (body.match(/unique_visits:\s*(\d+)/) || [])[1] || '0');
+            core.setOutput('tauri_count', (body.match(/tauri_count:\s*(\d+)/) || [])[1] || '0');
+            core.setOutput('pwa_count', (body.match(/pwa_count:\s*(\d+)/) || [])[1] || '0');
+            core.setOutput('ext_count', (body.match(/ext_count:\s*(\d+)/) || [])[1] || '0');
+
+      - name: Generate SVGs
+        id: gen_svg
+        run: |
+          mkdir -p metrics
+          body="${{ steps.read_metrics.outputs.latest_body }}"
+          # Pass body via stdin to avoid shell-quoting of multi-line strings
+          printf '%s' "$body" > ./_metrics_input.txt
+          python3 .github/workflows/render_svg.py \
+            --input-file ./_metrics_input.txt \
+            --output-dir metrics
+          rm -f ./_metrics_input.txt
+
+      - name: Render metrics dashboard
+        run: |
+          cat > metrics/README.md <<'METRICS_EOF'
+          # GitHub Social — Weekly Metrics
+
+          Auto-generated from anonymous session data. Updated every Monday at 06:00 UTC.
+
+          ## Charts
+
+          ![Visits](visits.svg)
+          ![Hearts](hearts.svg)
+          ![New Users](new-users.svg)
+          ![Reactions](reactions.svg)
+
+          ## Raw Data
+
+          See the [weekly metrics issue tracker](https://github.com/${{ github.repository }}/issues?q=label%3Aweekly-metrics) for raw inputs.
+          METRICS_EOF
+
+      - name: Commit metrics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add metrics/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(metrics): weekly update $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Create or update weekly issue
+        env:
+          WEEKLY_VISITS: ${{ steps.read_metrics.outputs.weekly_visits }}
+          WEEKLY_HEARTS: ${{ steps.read_metrics.outputs.weekly_hearts }}
+          WEEKLY_REACTIONS: ${{ steps.read_metrics.outputs.weekly_reactions }}
+          WEEKLY_NEW_USERS: ${{ steps.read_metrics.outputs.weekly_new_users }}
+          UNIQUE_VISITS: ${{ steps.read_metrics.outputs.unique_visits }}
+          TAURI_COUNT: ${{ steps.read_metrics.outputs.tauri_count }}
+          PWA_COUNT: ${{ steps.read_metrics.outputs.pwa_count }}
+          EXT_COUNT: ${{ steps.read_metrics.outputs.ext_count }}
+          LATEST_NUMBER: ${{ steps.read_metrics.outputs.latest_number }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            const weeklyVisits = process.env.WEEKLY_VISITS || '0';
+            const weeklyHearts = process.env.WEEKLY_HEARTS || '0';
+            const weeklyReactions = process.env.WEEKLY_REACTIONS || '0';
+            const weeklyNewUsers = process.env.WEEKLY_NEW_USERS || '0';
+            const uniqueVisits = process.env.UNIQUE_VISITS || '0';
+            const tauriCount = process.env.TAURI_COUNT || '0';
+            const pwaCount = process.env.PWA_COUNT || '0';
+            const extCount = process.env.EXT_COUNT || '0';
+
+            const newBody = [
+              "## Week of " + today,
+              "",
+              "### Snapshot",
+              "",
+              "- weekly_visits: " + weeklyVisits,
+              "- weekly_hearts: " + weeklyHearts,
+              "- weekly_reactions: " + weeklyReactions,
+              "- weekly_new_users: " + weeklyNewUsers,
+              "- unique_visits: " + uniqueVisits,
+              "- Platform breakdown: Tauri " + tauriCount + " | PWA " + pwaCount + " | Extension " + extCount,
+              "",
+              "See [metrics/README.md](../blob/main/metrics/README.md) for rendered charts."
+            ].join("\n");
+
+            const latestNumber = process.env.LATEST_NUMBER || "";
+            const existing = parseInt(latestNumber, 10);
+
+            if (Number.isFinite(existing) && existing > 0) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing,
+                body: newBody,
+                labels: ['weekly-metrics', 'automated'],
+              });
+              console.log("Updated issue #" + existing);
+            } else {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: "Weekly Metrics — " + today,
+                body: newBody,
+                labels: ['weekly-metrics', 'automated'],
+              });
+              console.log("Created issue #" + issue.data.number);
+            }

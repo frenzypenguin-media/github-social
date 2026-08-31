@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Prevent concurrent runs (e.g. push-to-main + PR-merge) from racing.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  extension-smoke:
+    name: MV3 service worker smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Parses every extension script through Node's parser. Catches:
+      #   - Missing braces/parens (the bug that pass 4 caught)
+      #   - `await` outside async (top-level await needs `"type": "module"`)
+      #   - `import` statements that resolve to non-existent files
+      #   - Reserved words used as identifiers
+      - name: Parse background.js
+        run: node --check extension/background.js
+
+      - name: Parse content.js
+        run: node --check extension/content.js
+
+      - name: Parse popup.js
+        run: node --check extension/popup.js
+
+      # Validate the MV3 manifest schema and our required fields.
+      - name: Validate manifest.json
+        run: |
+          node -e "
+            const fs = require('fs');
+            const mj = JSON.parse(fs.readFileSync('extension/manifest.json', 'utf8'));
+            if (mj.manifest_version !== 3) {
+              console.error('Expected manifest_version 3, got', mj.manifest_version);
+              process.exit(1);
+            }
+            if (mj.background && mj.background.type === 'module' && !mj.background.service_worker) {
+              console.error('Module-typed background must declare a service_worker');
+              process.exit(1);
+            }
+            if (mj.content_scripts) {
+              for (const cs of mj.content_scripts) {
+                if (!cs.matches || cs.matches.length === 0) {
+                  console.error('content_script must have at least one match pattern');
+                  process.exit(1);
+                }
+              }
+            }
+            console.log('manifest.json OK');
+          "
+
+      # Run the no-unsanitized-innerhtml lint rule.
+      - name: Lint innerHTML usage
+        run: |
+          node .github/lint/no-unsanitized-innerhtml.mjs \
+            extension/content.js \
+            src/app.js
+
+  python-tests:
+    name: Python test suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # NOTE: These tests live in the parent workspace at
+    #   <workspace>/network/tests/test_*.py
+    # They are NOT included in the github-social repo checkout.
+    # To run in CI, either:
+    #   (a) copy the test directory into this repo, or
+    #   (b) use a monorepo checkout action.
+    # The step below is a placeholder that will silently succeed when the
+    # files are absent. Real CI should use approach (a) or (b).
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Run test suites (if present)
+        run: |
+          if [ -d network/tests ]; then
+            for t in network/tests/test_*.py; do
+              echo "=== $t ==="
+              python "$t" || exit 1
+            done
+          else
+            echo "network/tests/ not found in this checkout — skipping Python tests."
+            echo "See: https://github.com/neohiro/github-social/issues"
+          fi
+
+  ext-build:
+    name: Browser extension build (Vite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build:ext
+
+      - name: Verify extension output
+        run: |
+          if [ ! -d dist-ext ]; then
+            echo "::error::dist-ext/ not produced"
+            exit 1
+          fi
+          for f in background.js content.js popup.js manifest.json; do
+            if [ ! -f "dist-ext/$f" ]; then
+              echo "::error::dist-ext/$f missing"
+              exit 1
+            fi
+          done
+          echo "Built files:"
+          ls -la dist-ext/ | head -20
+          # Verify the bundles are smaller than the source (minification worked).
+          for f in background.js content.js popup.js; do
+            src_size=$(wc -c < "extension/$f")
+            out_size=$(wc -c < "dist-ext/$f")
+            pct=$(( out_size * 100 / src_size ))
+            echo "$f: $src_size → $out_size bytes (${pct}% of source)"
+            if [ "$out_size" -ge "$src_size" ]; then
+              echo "::warning::$f bundle is not smaller than source — minification may be off"
+            fi
+          done
+
+  pwa-build:
+    name: PWA build (smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build PWA
+        run: npm run build:pwa
+
+      - name: Verify PWA output
+        run: |
+          if [ ! -d dist-pwa ]; then
+            echo "::error::dist-pwa/ not produced"
+            exit 1
+          fi
+          echo "Built files:"
+          ls dist-pwa/ | head -20
+          # The .nojekyll guard is what allows GitHub Pages to serve
+          # Vite's _nuxt/ assets. Build doesn't need it; deploy does.

@@ -1,0 +1,28 @@
+{
+  "name": "github-social",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:pwa": "PWA_BASE=/github-social/ vite build",
+    "build:ext": "vite build --config vite.ext.config.ts",
+    "build:embed": "vite build --config vite.embed.config.ts",
+    "build:all": "npm run build && npm run build:ext && npm run build:embed",
+    "preview": "vite preview",
+    "preview:pwa": "vite preview --base=/github-social/",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-process": "^2.0.0",
+    "@tauri-apps/plugin-updater": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "dompurify": "^3.4.14",
+    "vite": "^5.4.0",
+    "vite-plugin-pwa": "^0.20.5"
+  }
+}

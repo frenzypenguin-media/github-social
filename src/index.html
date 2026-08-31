@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Social</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --accent-dim: #1f6feb;
+        --danger: #f85149;
+        --success: #3fb950;
+        --warn: #d29922;
+        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      }
+
+      html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+
+      #app { display: flex; flex-direction: column; height: 100vh; }
+
+      header {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        -webkit-app-region: drag;
+      }
+      header h1 { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+      header .version { font-size: 11px; color: var(--muted); }
+
+      nav {
+        display: flex; gap: 2px; padding: 8px 12px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+      }
+      nav button {
+        background: none; border: none; color: var(--muted);
+        font-size: 13px; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+      }
+      nav button:hover { background: var(--border); color: var(--text); }
+      nav button.active { background: var(--accent-dim); color: #fff; }
+
+      main { flex: 1; overflow-y: auto; padding: 20px; }
+
+      .search-bar { display: flex; gap: 8px; margin-bottom: 20px; }
+      .search-bar input {
+        flex: 1; background: var(--surface); border: 1px solid var(--border);
+        color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none;
+      }
+      .search-bar input:focus { border-color: var(--accent); }
+      .search-bar select {
+        background: var(--surface); border: 1px solid var(--border);
+        color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 13px; outline: none;
+      }
+      .search-bar button {
+        background: var(--accent-dim); border: none; color: #fff;
+        padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500;
+      }
+      .search-bar button:hover { background: var(--accent); }
+      .search-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .result-list { display: flex; flex-direction: column; gap: 8px; }
+      .result-item {
+        display: flex; align-items: center; gap: 12px;
+        background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+        cursor: pointer; transition: border-color 0.15s;
+      }
+      .result-item:hover { border-color: var(--accent); }
+      .result-item .avatar {
+        width: 40px; height: 40px; border-radius: 50%; background: var(--border);
+        object-fit: cover; flex-shrink: 0;
+      }
+      .result-item .info { flex: 1; min-width: 0; }
+      .result-item .login { font-weight: 600; color: var(--accent); }
+      .result-item .type-badge {
+        font-size: 11px; padding: 2px 7px; border-radius: 12px; font-weight: 500; text-transform: uppercase;
+      }
+      .result-item .type-badge.user { background: #1f6feb22; color: var(--accent); }
+      .result-item .type-badge.org { background: #3fb95022; color: var(--success); }
+      .result-item .promoted { font-size: 10px; color: var(--danger); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+      .result-item .followers { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .result-item .flags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+      .result-item .flag { font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 500; }
+      .result-item .flag.integrity { background: #d2992222; color: var(--warn); }
+      .result-item .flag.rate-limited { background: #f8514922; color: var(--danger); }
+
+      .status-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 6px 16px; background: var(--surface);
+        border-top: 1px solid var(--border); font-size: 11px; color: var(--muted);
+        gap: 12px;
+      }
+      .status-bar .group { display: flex; gap: 12px; }
+      .status-bar .counter { color: var(--accent); font-weight: 600; }
+      .status-bar .stat { color: var(--text); }
+      .status-bar .stat .num { color: var(--accent); font-weight: 600; }
+
+      .panel { display: none; }
+      .panel.active { display: block; }
+
+      .error-msg { color: var(--danger); padding: 12px; text-align: center; font-size: 13px; }
+      .error-msg.warn { color: var(--warn); }
+      .loading { color: var(--muted); padding: 20px; text-align: center; }
+
+      #settings-panel textarea, #settings-panel input[type="text"] {
+        width: 100%; background: var(--surface); border: 1px solid var(--border);
+        color: var(--text); padding: 10px; border-radius: 6px; font-size: 12px;
+        font-family: monospace; resize: vertical; min-height: 80px; margin-bottom: 10px;
+      }
+      #settings-panel label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; margin-top: 8px; }
+      #settings-panel .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+      #settings-panel button {
+        background: var(--accent-dim); border: none; color: #fff;
+        padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+      }
+      #settings-panel button.danger { background: var(--danger); }
+      #settings-panel .hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
+
+      .badge-row { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); margin-top: 8px; }
+      .badge-row .ok { color: var(--success); }
+      .badge-row .bad { color: var(--danger); }
+
+      .network-user {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+        padding: 10px; display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+      }
+      .network-user .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--border); object-fit: cover; }
+      .network-user .login { font-weight: 600; color: var(--accent); }
+
+      #session-stats-bar {
+        display: flex;
+        gap: 16px;
+        padding: 8px 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      #session-stats-bar span { display: flex; align-items: center; gap: 4px; }
+      #session-stats-bar .stat-val { color: var(--accent); font-weight: 600; min-width: 20px; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>GitHub Social</h1>
+        <span class="version" id="version-label">v0.2.0</span>
+      </header>
+
+      <nav>
+        <button class="active" data-panel="search">Search</button>
+        <button data-panel="network">Network</button>
+        <button data-panel="prefs">Prefs</button>
+        <button data-panel="settings">Settings</button>
+      </nav>
+
+      <main>
+        <div id="search-panel" class="panel active">
+          <div id="session-stats-bar">
+            <span>&#128064; <span class="stat-val" id="ss-visits">0</span> visits</span>
+            <span>&#10084;&#65039; <span class="stat-val" id="ss-hearts">0</span> hearts</span>
+            <span>&#128172; <span class="stat-val" id="ss-comments">0</span> comments</span>
+            <span>&#128220; <span class="stat-val" id="ss-reactions">0</span> reactions</span>
+            <span>&#127930; <span class="stat-val" id="ss-plays">0</span> plays</span>
+          </div>
+          <div class="search-bar">
+            <input id="search-input" placeholder="Search GitHub users & organizations…" autocomplete="off" maxlength="256" />
+            <select id="search-type">
+              <option value="user">Users</option>
+              <option value="org">Organizations</option>
+            </select>
+            <button id="search-btn">Search</button>
+          </div>
+          <div id="search-results" class="result-list"></div>
+        </div>
+
+        <div id="network-panel" class="panel">
+          <div class="search-bar">
+            <input id="network-input" placeholder="Enter GitHub username to view network…" autocomplete="off" maxlength="256" />
+            <button id="network-btn">Load</button>
+          </div>
+          <div id="network-results"></div>
+        </div>
+
+        <div id="prefs-panel" class="panel">
+          <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
+            Read from <code>&lt;your-repo&gt;/GitHubSocial.md</code> frontmatter (first ~30 lines).
+            Edit your file directly or via Settings → "Bootstrap my GitHubSocial.md".
+          </p>
+          <div id="prefs-content" class="loading">Loading…</div>
+        </div>
+
+        <div id="settings-panel" class="panel">
+          <label>GitHub Personal Access Token (stored locally, never sent beyond api.github.com)</label>
+          <textarea id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"></textarea>
+          <div class="badge-row" id="token-status"></div>
+          <div class="row">
+            <button id="save-token-btn">Save Token</button>
+            <button class="danger" id="clear-token-btn">Clear Token</button>
+          </div>
+
+          <label>My profile repo (defaults to &lt;login&gt;/&lt;login&gt;)</label>
+          <input type="text" id="my-profile-repo" placeholder="username/username" />
+          <div class="hint">Override only if your profile README is in a different repo.</div>
+
+          <label>GitHub username (used for journey log writes)</label>
+          <input type="text" id="my-login" placeholder="octocat" />
+
+          <div class="row" style="margin-top:16px;">
+            <button id="bootstrap-md-btn">Bootstrap my GitHubSocial.md</button>
+          </div>
+          <div class="hint" id="bootstrap-status"></div>
+
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);text-align:center;">
+            <p style="color:var(--muted);font-size:11px;">
+              github-social v0.2.0 &copy; 2026 neohiro<br>
+              <a href="https://github.com/sponsors/neohiro" target="_blank" rel="noopener" style="color:#d23;text-decoration:none;">&#9829; Sponsor neohiro on GitHub</a>
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <div class="status-bar">
+        <span id="status-text">Ready</span>
+        <div class="group">
+          <span class="stat" title="Searches this session">&#128269; <span class="num" id="stat-searches">0</span></span>
+          <span class="stat" title="Profiles loaded this session">&#128100; <span class="num" id="stat-profiles">0</span></span>
+          <span class="stat" title="Reactions given this session">&#10084; <span class="num" id="stat-reactions">0</span></span>
+          <span class="stat" title="Issues opened this session">&#128221; <span class="num" id="stat-issues">0</span></span>
+          <span class="counter" id="status-counter">GitHub Social — Decentralized</span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { bootstrap, renderSessionStats } from "./app.js";
+      window._renderSessionStats = renderSessionStats;
+      bootstrap();
+    </script>
+  </body>
+</html>

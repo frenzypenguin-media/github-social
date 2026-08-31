@@ -1,0 +1,86 @@
+{
+  "ext_name": {
+    "message": "GitHub Social",
+    "description": "Name of the extension"
+  },
+  "ext_description": {
+    "message": "Decentralized social layer on top of GitHub profiles. Heart, react, and journal your visits.",
+    "description": "Extension description"
+  },
+  "ext_version": {
+    "message": "0.2.0",
+    "description": "Extension version"
+  },
+  "popup_title": {
+    "message": "GitHub Social",
+    "description": "Popup window title"
+  },
+  "btn_heart": {
+    "message": "Heart",
+    "description": "Heart button label"
+  },
+  "btn_react": {
+    "message": "React",
+    "description": "React button label"
+  },
+  "btn_comment": {
+    "message": "Comment",
+    "description": "Comment button label"
+  },
+  "btn_invite": {
+    "message": "Invite to GitHub Social",
+    "description": "Invite button label"
+  },
+  "label_verified": {
+    "message": "Verified",
+    "description": "Integrity badge verified"
+  },
+  "label_warning": {
+    "message": "Warning",
+    "description": "Integrity badge warning"
+  },
+  "label_issue": {
+    "message": "Issue",
+    "description": "Issue label"
+  },
+  "stat_visits": {
+    "message": "visits",
+    "description": "Visits stat label"
+  },
+  "stat_hearts": {
+    "message": "hearts",
+    "description": "Hearts stat label"
+  },
+  "stat_reactions": {
+    "message": "reactions",
+    "description": "Reactions stat label"
+  },
+  "stat_plays": {
+    "message": "plays",
+    "description": "Music plays stat label"
+  },
+  "msg_token_required": {
+    "message": "Set your GitHub token in the extension popup first",
+    "description": "Token required message"
+  },
+  "msg_sent": {
+    "message": "Sent!",
+    "description": "Reaction sent confirmation"
+  },
+  "msg_failed": {
+    "message": "Failed to send",
+    "description": "Send failed message"
+  },
+  "msg_not_on_github_social": {
+    "message": "Not on GitHub Social yet",
+    "description": "Non-user banner message"
+  },
+  "msg_music_no_url": {
+    "message": "No music configured",
+    "description": "Music not available message"
+  },
+  "msg_no_interactions": {
+    "message": "No interactions yet",
+    "description": "Empty journey log message"
+  }
+}
