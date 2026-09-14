@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
-    "dompurify": "^3.4.14",
+    "dompurify": "^3.4.15",
     "vite": "^5.4.0",
     "vite-plugin-pwa": "^0.20.5"
   }
