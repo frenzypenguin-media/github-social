@@ -238,3 +238,5 @@ infrastructure within their free tier. GitHub Actions builds and publishes the
 binaries. GitHub Releases distributes them. GitHub is the backbone.
 
 Thank you, GitHub. Every day, a little more.
+
+[![Visitors](https://api.visitorbadge.io/api/visitors?path=github.com/frenzypenguin-media/github-social&label=Visitors&countColor=%23263759)](https://visitorbadge.io/status?path=github.com/frenzypenguin-media/github-social)
