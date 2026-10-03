@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 540" width="600" height="540">
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }</style>
+  <rect x="0" y="0" width="600" height="540" fill="#0d1117" rx="8"/>
+  <text x="20" y="28" fill="#c9d1d9" font-size="16" font-weight="700">GitHub Social — Weekly Metrics</text>
+  <text x="20" y="46" fill="#8b949e" font-size="11">Updated weekly · Pure SVG · No JS</text>
+  <rect x="20" y="60" width="560" height="100" fill="#161b22" rx="6" stroke="#30363d"/>
+  <text x="32" y="84" fill="#c9d1d9" font-size="13" font-weight="600">Visits</text>
+  <text x="568" y="84" fill="#58a6ff" font-size="16" font-weight="700" text-anchor="end">0</text>
+  <rect x="20" y="170" width="560" height="100" fill="#161b22" rx="6" stroke="#30363d"/>
+  <text x="32" y="194" fill="#c9d1d9" font-size="13" font-weight="600">Hearts</text>
+  <text x="568" y="194" fill="#d23" font-size="16" font-weight="700" text-anchor="end">0</text>
+  <rect x="20" y="280" width="560" height="100" fill="#161b22" rx="6" stroke="#30363d"/>
+  <text x="32" y="304" fill="#c9d1d9" font-size="13" font-weight="600">New Users</text>
+  <text x="568" y="304" fill="#3fb950" font-size="16" font-weight="700" text-anchor="end">0</text>
+  <rect x="20" y="390" width="560" height="100" fill="#161b22" rx="6" stroke="#30363d"/>
+  <text x="32" y="414" fill="#c9d1d9" font-size="13" font-weight="600">Reactions</text>
+  <text x="568" y="414" fill="#d29922" font-size="16" font-weight="700" text-anchor="end">0</text>
+</svg>

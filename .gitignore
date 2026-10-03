@@ -22,5 +22,8 @@ __pycache__/
 .pytest_cache/
 *.pyc
 *.pkl
-metrics/
+# NOTE: do not ignore metrics/ -- journey-sync.yml renders the metrics SVGs
+# there and commits them on every run. While `metrics/` was listed here,
+# `git add metrics/` silently no-opped behind `|| true` and the step still
+# reported success, so the workflow published nothing.
 .github/.tmp/
