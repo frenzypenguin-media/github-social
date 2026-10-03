@@ -98,6 +98,12 @@ jobs:
           # when asked to cache pip. The job is an explicit placeholder (see the
           # comment above) that should succeed when the files are absent.
 
+      - name: Install CI script dependencies
+        run: python -m pip install --disable-pip-version-check --quiet pyyaml
+
+      - name: Check deploy workflow correctness
+        run: python scripts/check_deploy_workflow.py
+
       - name: Run test suites (if present)
         run: |
           if [ -d network/tests ]; then
@@ -106,7 +112,7 @@ jobs:
               python "$t" || exit 1
             done
           else
-            echo "network/tests/ not found in this checkout — skipping Python tests."
+            echo "network/tests/ not found in this checkout — skipping workspace tests."
             echo "See: https://github.com/neohiro/github-social/issues"
           fi
 
