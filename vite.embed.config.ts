@@ -10,7 +10,7 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, "dist-embed"),
     emptyOutDir: true,
-    minify: "esbuild",
+    minify: "oxc",
     sourcemap: false,
     target: "chrome109",
     lib: {
@@ -18,11 +18,6 @@ export default defineConfig({
       name: "GHSocialEmbed",
       fileName: "embed",
       formats: ["es", "iife"],
-    },
-    rollupOptions: {
-      output: {
-        inlineDynamicImports: ["../src/social-widget.js"],
-      },
     },
   },
 });

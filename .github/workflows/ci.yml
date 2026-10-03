@@ -92,7 +92,11 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.11"
-          cache: "pip"
+          # No `cache: "pip"` here on purpose: this repo has no
+          # requirements.txt / pyproject.toml, and setup-python fails hard with
+          # "No file matched to [**/requirements.txt or **/pyproject.toml]"
+          # when asked to cache pip. The job is an explicit placeholder (see the
+          # comment above) that should succeed when the files are absent.
 
       - name: Run test suites (if present)
         run: |
