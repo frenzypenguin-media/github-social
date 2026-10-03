@@ -78,7 +78,7 @@ export default defineConfig({
   build: {
     outDir: OUT_DIR,
     emptyOutDir: true,
-    minify: "esbuild",
+    minify: "oxc",
     sourcemap: false,
     target: "chrome109",
       rollupOptions: {
