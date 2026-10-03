@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" width="600" height="240">
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }</style>
+  <rect x="0" y="0" width="600" height="240" fill="#161b22" rx="8"/>
+  <rect x="0.5" y="0.5" width="599" height="239" fill="none" stroke="#30363d" rx="8"/>
+  <text x="50" y="24" fill="#c9d1d9" font-size="14" font-weight="600">Reactions</text>
+  <text x="300" y="120" fill="#8b949e" font-size="13" text-anchor="middle">No data yet</text>
+  <text x="50" y="222" fill="#21262d" font-size="11">Last 8 weeks · all values zero</text>
+</svg>
