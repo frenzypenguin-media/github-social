@@ -88,9 +88,14 @@ jobs:
           # so they can be loaded via a single stable URL:
           #   https://frenzypenguin-media.github.io/embed.js         (ES module)
           #   https://frenzypenguin-media.github.io/embed.iife.js   (IIFE — <script src>)
-          cp dist-embed/embed.js site-target/embed.js
-          cp dist-embed/embed.iife.js site-target/github-social/embed.js
-          cp dist-embed/embed.js site-target/github-social/embed.js
+          # Keep the two formats under distinct filenames. They used to be both
+          # copied to github-social/embed.js, so the IIFE was written and then
+          # immediately overwritten by the ES module; any consumer loading that
+          # path via <script src> got `Unexpected token 'export'`.
+          cp dist-embed/embed.js      site-target/embed.js
+          cp dist-embed/embed.iife.js site-target/embed.iife.js
+          cp dist-embed/embed.js      site-target/github-social/embed.js
+          cp dist-embed/embed.iife.js site-target/github-social/embed.iife.js
           # GitHub Pages runs Jekyll which strips files starting with `_`.
           # Vite's workbox build outputs hashed assets to `_nuxt/`. Without this
           # file, Jekyll silently deletes the entire PWA JS/CSS cache.
@@ -98,21 +103,42 @@ jobs:
           echo "Deployed files:"
           ls site-target/github-social/ | head -20
           echo "Site-root files:"
-          ls site-target/embed.js 2>/dev/null && echo "embed.js deployed" || echo "embed.js MISSING"
+          for f in embed.js embed.iife.js; do
+            if [ -s "site-target/$f" ]; then echo "  $f ok"; else echo "  ::error::$f MISSING"; exit 1; fi
+          done
 
       - name: Commit and push to GitHub Pages
         env:
-          GH_TOKEN: ${{ secrets.GH_PAGES_TOKEN || github.token }}
+          # Used for the authenticated push below. NOT passed as GH_TOKEN alone:
+          # GH_TOKEN is only read by the `gh` CLI, so a bare `git push` never
+          # sees it and dies with "could not read Username for 'https://github.com'".
+          PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
         run: |
+          set -euo pipefail
           cd site-target
+          if [ -z "${PAGES_TOKEN:-}" ]; then
+            echo "::error title=Missing GH_PAGES_TOKEN::This workflow pushes to"
+            echo "::error::frenzypenguin-media/frenzypenguin-media.github.io, a different repo"
+            echo "::error::from github-social. The workflow GITHUB_TOKEN is scoped to"
+            echo "::error::github-social only and cannot write there. Add a repository"
+            echo "::error::secret named GH_PAGES_TOKEN (PAT or GitHub App installation"
+            echo "::error::token with 'contents: write' on frenzypenguin-media.github.io)."
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add github-social/ .nojekyll
+          # Stage the site-root embed bundles too -- they were copied above but
+          # never added, so they never reached the deployed site.
+          git add github-social/ .nojekyll embed.js embed.iife.js
           if git diff --staged --quiet; then
             echo "No changes to deploy"
           else
             git status --short
             git commit -m "build(pwa): deploy $(date -u +%Y-%m-%dT%H:%M:%S)"
-            git push
+            # Embed the credential in the remote URL for this one push, so git
+            # actually has auth. A credential helper or extraheader would instead
+            # leave the token in .git/config, where it can leak into later output.
+            git push "https://x-access-token:${PAGES_TOKEN}@github.com/frenzypenguin-media/frenzypenguin-media.github.io.git" \
+              HEAD:main
             echo "::notice::PWA deployed to frenzypenguin-media.github.io/github-social/"
           fi
