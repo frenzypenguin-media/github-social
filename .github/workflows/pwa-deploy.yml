@@ -121,22 +121,63 @@ jobs:
 
       - name: Commit and push to GitHub Pages
         env:
-          # Used for the authenticated push below. NOT passed as GH_TOKEN alone:
-          # GH_TOKEN is only read by the `gh` CLI, so a bare `git push` never
-          # sees it and dies with "could not read Username for 'https://github.com'".
+          # Preferred: an SSH deploy key scoped to the Pages repo.
+          #   GH_PAGES_SSH_KEY — private ed25519 key whose PUBLIC half is
+          #                       registered as a deploy key on
+          #                       frenzypenguin-media.github.io
+          # Fallback: a token with contents:write on the Pages repo.
+          #   GH_PAGES_TOKEN   — fine-grained PAT (or App installation token)
+          # Neither is required to *build*; the workflow's GITHUB_TOKEN can
+          # read the Pages repo (it is public) but can never write to it.
+          #
+          # GH_TOKEN is deliberately NOT used: it is read only by the `gh` CLI,
+          # so a bare `git push` would die with "could not read Username".
+          PAGES_SSH_KEY: ${{ secrets.GH_PAGES_SSH_KEY }}
           PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+          TARGET_REMOTE: frenzypenguin-media/frenzypenguin-media.github.io
+          # GitHub's published ed25519 host key (api.github.com/meta). Pinned
+          # rather than ssh-keyscan'd, so trust does not depend on being first
+          # to reach the host.
+          GITHUB_HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GK
         run: |
           set -euo pipefail
           cd site-target
-          if [ -z "${PAGES_TOKEN:-}" ]; then
-            echo "::error title=Missing GH_PAGES_TOKEN::This workflow pushes to"
-            echo "::error::frenzypenguin-media/frenzypenguin-media.github.io, a different repo"
-            echo "::error::from github-social. The workflow GITHUB_TOKEN is scoped to"
-            echo "::error::github-social only and cannot write there. Add a repository"
-            echo "::error::secret named GH_PAGES_TOKEN (PAT or GitHub App installation"
-            echo "::error::token with 'contents: write' on frenzypenguin-media.github.io)."
+
+          ssh_key=""
+          known_hosts=""
+          # Never leave key material on the runner, even on failure.
+          cleanup() {
+            [ -n "$ssh_key" ] && rm -f "$ssh_key"
+            [ -n "$known_hosts" ] && rm -f "$known_hosts"
+            return 0
+          }
+          trap cleanup EXIT
+
+          if [ -n "${PAGES_SSH_KEY:-}" ]; then
+            ssh_key="$(mktemp)"
+            known_hosts="$(mktemp)"
+            printf '%s\n' "$PAGES_SSH_KEY" > "$ssh_key"
+            chmod 600 "$ssh_key"
+            printf '%s\n' "$GITHUB_HOST_KEY" > "$known_hosts"
+            chmod 600 "$known_hosts"
+            remote="git@github.com:${TARGET_REMOTE}.git"
+            export GIT_SSH_COMMAND="ssh -i ${ssh_key} -o UserKnownHostsFile=${known_hosts} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes"
+            echo "Using SSH deploy key."
+          elif [ -n "${PAGES_TOKEN:-}" ]; then
+            remote="https://x-access-token:${PAGES_TOKEN}@github.com/${TARGET_REMOTE}.git"
+            echo "Using GH_PAGES_TOKEN."
+          else
+            echo "::error title=No deploy credential::This workflow publishes to"
+            echo "::error::${TARGET_REMOTE}, a different repository from github-social."
+            echo "::error::The workflow GITHUB_TOKEN is scoped to github-social and cannot"
+            echo "::error::write there. Provide EITHER:"
+            echo "::error::  1) GH_PAGES_SSH_KEY - an SSH deploy key on the Pages repo"
+            echo "::error::     (Settings -> Deploy keys must allow deploy keys first), or"
+            echo "::error::  2) GH_PAGES_TOKEN - a token with 'contents: write' on the"
+            echo "::error::     Pages repo only. See docs/DEPLOYMENT.md."
             exit 1
           fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Stage the site-root embed bundles too -- they were copied above but
@@ -147,17 +188,13 @@ jobs:
           else
             git status --short
             git commit -m "build(pwa): deploy $(date -u +%Y-%m-%dT%H:%M:%S)"
-            # Embed the credential in the remote URL for these git calls, so git
-            # actually has auth. A credential helper or extraheader would instead
-            # leave the token in .git/config, where it can leak into later output.
-            REMOTE="https://x-access-token:${PAGES_TOKEN}@github.com/frenzypenguin-media/frenzypenguin-media.github.io.git"
             # The Pages repo is SHARED and actively written by other jobs --
             # "FPM heartbeat" and "FPM FB feed sync" land on main every few hours,
             # alongside manual commits. Pushing straight from the checkout would
             # fail with non-fast-forward as soon as one of those landed in between.
             # Rebase onto the current main first; a genuine conflict still fails
             # loudly rather than clobbering another job's work.
-            git pull --rebase "$REMOTE" main
-            git push "$REMOTE" HEAD:main
-            echo "::notice::PWA deployed to frenzypenguin-media.github.io/github-social/"
+            git pull --rebase "$remote" main
+            git push "$remote" HEAD:main
+            echo "::notice::PWA deployed to ${TARGET_REMOTE}/github-social/"
           fi
