@@ -218,10 +218,24 @@ github-social/
 │   └── FUNDING.yml
 ├── GitHubSocial.md       # Template users can copy
 ├── SPEC_ADDENDUM.md      # Full v0.2.0 protocol spec
+├── docs/DEPLOYMENT.md    # How publishing works + required GH_PAGES_TOKEN secret
 ├── KB/                   # Knowledge base
 │   └── README.md
 └── profile-activator.html  # Legacy HTML activator (v0.1.0)
 ```
+
+---
+
+## Deploying
+
+Publishing the PWA and embed bundles to `frenzypenguin-media.github.io`
+requires the **`GH_PAGES_TOKEN`** repository secret on this repo, because the
+workflow's own `GITHUB_TOKEN` cannot write to a different repository. Until it
+is configured, `PWA Deploy` fails fast at the push step with an explicit error.
+
+Setup steps, the two constraints the deploy must keep (no root `.nojekyll` on a
+Jekyll site; rebase before pushing to a shared repo), and local verification
+commands: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 ---
 

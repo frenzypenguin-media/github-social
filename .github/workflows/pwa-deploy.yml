@@ -8,15 +8,19 @@ name: PWA Deploy
 #   2. npm install + npm run build:pwa  →  dist-pwa/
 #   3. Check out frenzypenguin-media.github.io (target site)
 #   4. rsync/copy dist-pwa/ → frenzypenguin-media.github.io/github-social/
-#   5. Commit to frenzypenguin-media.github.io (GitHub Pages serves from main branch)
+#   5. Rebase onto the target's main, commit, and push (Pages serves from main)
 #
-# NOTE: This workflow requires a GITHUB_TOKEN with write access to BOTH repos.
-# Set up a GitHub App token or personal access token with `repo` scope on both
-# orgs if the default GITHUB_TOKEN only covers the source repo.
+# Full setup and rationale: docs/DEPLOYMENT.md
 #
 # GitHub Actions vars/secrets needed:
-#   GH_PAGES_TOKEN  — token with write access to frenzypenguin-media.github.io
-#                     (not required if GITHUB_TOKEN covers both repos)
+#   GH_PAGES_TOKEN  — a credential with write access to
+#                     frenzypenguin-media.github.io, stored as a repository
+#                     secret on THIS repo (github-social).
+#                     Required: the workflow GITHUB_TOKEN is scoped to
+#                     github-social and cannot write to a different repository.
+#                     This is architectural, not a config mistake — cross-repo
+#                     writes always need an external credential. Without it the
+#                     job fails fast at the push step with an explicit error.
 
 on:
   push:
