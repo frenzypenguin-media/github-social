@@ -111,6 +111,17 @@ def main() -> int:
     check("touch site-target/.nojekyll" not in copy_step,
           "site-root .nojekyll touch removed")
 
+    print("\n#5 shared target repo must be rebased before pushing")
+    # frenzypenguin-media.github.io is written by other jobs ("FPM heartbeat",
+    # "FPM FB feed sync") plus manual commits. Pushing straight from the checkout
+    # races them and fails non-fast-forward, so the workflow must rebase first.
+    check("git pull --rebase" in push_step,
+          "rebases onto the target repo's current main before pushing")
+    pull = push_step.index("git pull --rebase") if "git pull --rebase" in push_step else -1
+    psh = push_step.index("git push") if "git push" in push_step else len(push_step)
+    check(pull != -1 and pull < psh, "rebase happens before the push")
+    check("REMOTE=" in push_step, "remote URL is bound once to a variable")
+
     print("\n#3 no destination may be written twice")
     dests: dict[str, list[str]] = {}
     for line in copy_step.splitlines():
