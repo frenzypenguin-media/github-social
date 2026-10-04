@@ -429,6 +429,14 @@ runs `build:embed` after `build:pwa` and copies both bundles to the site
 root: `https://frenzypenguin-media.github.io/embed.js` and
 `https://frenzypenguin-media.github.io/embed.iife.js`.
 
+Each format keeps a distinct filename. They were previously both copied to
+`github-social/embed.js`, so the IIFE was overwritten by the ES module and any
+`<script src>` consumer of that path failed with `Unexpected token 'export'`.
+
+Publishing requires the `GH_PAGES_TOKEN` repository secret; see
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for setup and the constraints the
+deploy workflow must keep.
+
 ---
 
 ## 13. Extension Bridge API (window.ghsocial.*)
