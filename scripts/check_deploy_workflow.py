@@ -13,6 +13,13 @@ Each check pins a defect that was present and silently shipped:
 3. embed.js (ES module) and embed.iife.js (IIFE) were both copied to
    github-social/embed.js, so the IIFE was overwritten by the ES module and any
    consumer loading that path with <script src> got "Unexpected token 'export'".
+4. A root .nojekyll was created and committed. The target repo is a Jekyll site
+   (jekyll-feed/seo-tag/sitemap plugins, a `tools` collection published to
+   /tools/:name/, `layout: "tool"` defaults). .nojekyll only takes effect at the
+   publishing root, so it would have switched Jekyll off for the entire site and
+   dropped every /tools/*/ page, feed.xml and sitemap.xml. The justification
+   comment ("workbox outputs to _nuxt/") was stale: `vite build` output contains
+   no underscore-prefixed paths, so nothing needed protecting.
 
 Run:  python scripts/check_deploy_workflow.py
 Exit: 0 all checks passed, 1 otherwise.
@@ -86,8 +93,23 @@ def main() -> int:
     check(add is not None, "git add present")
     if add:
         args = add.group(1)
-        for want in ("embed.js", "embed.iife.js", ".nojekyll"):
+        for want in ("embed.js", "embed.iife.js"):
             check(want in args, f"stages {want}", args)
+        check(".nojekyll" not in args,
+              "does not stage a root .nojekyll (would disable Jekyll site-wide)",
+              args)
+
+    print("\n#4 must not create a root .nojekyll")
+    # `touch site-target/.nojekyll` would land at the publishing root and switch
+    # Jekyll off for the whole shared site. A reference inside a comment is fine;
+    # only actual shell is checked.
+    shell_only = "\n".join(
+        l for l in copy_step.splitlines() if not l.lstrip().startswith("#")
+    )
+    check(".nojekyll" not in shell_only,
+          "no .nojekyll created outside comments")
+    check("touch site-target/.nojekyll" not in copy_step,
+          "site-root .nojekyll touch removed")
 
     print("\n#3 no destination may be written twice")
     dests: dict[str, list[str]] = {}

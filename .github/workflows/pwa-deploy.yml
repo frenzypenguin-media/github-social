@@ -96,10 +96,18 @@ jobs:
           cp dist-embed/embed.iife.js site-target/embed.iife.js
           cp dist-embed/embed.js      site-target/github-social/embed.js
           cp dist-embed/embed.iife.js site-target/github-social/embed.iife.js
-          # GitHub Pages runs Jekyll which strips files starting with `_`.
-          # Vite's workbox build outputs hashed assets to `_nuxt/`. Without this
-          # file, Jekyll silently deletes the entire PWA JS/CSS cache.
-          touch site-target/.nojekyll
+          # NOTE: deliberately NO root .nojekyll here.
+          # The site at frenzypenguin-media.github.io is a Jekyll site (_config.yml
+          # with jekyll-feed/seo-tag/sitemap, a `tools` collection published to
+          # /tools/:name/, and `layout: "tool"` defaults). A .nojekyll at the
+          # publishing root switches Jekyll off for the WHOLE site, which would
+          # drop every /tools/*/ page, feed.xml and sitemap.xml.
+          # The old comment here justified .nojekyll with "Vite's workbox build
+          # outputs hashed assets to _nuxt/". That is stale: no vite config sets
+          # assetsDir to _nuxt, and `vite build` output was verified to contain no
+          # underscore-prefixed paths, so Jekyll has nothing to strip here.
+          # (github-social/.nojekyll already exists in the site repo but is inert --
+          # Pages only honours .nojekyll at the publishing root.)
           echo "Deployed files:"
           ls site-target/github-social/ | head -20
           echo "Site-root files:"
@@ -129,7 +137,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Stage the site-root embed bundles too -- they were copied above but
           # never added, so they never reached the deployed site.
-          git add github-social/ .nojekyll embed.js embed.iife.js
+          git add github-social/ embed.js embed.iife.js
           if git diff --staged --quiet; then
             echo "No changes to deploy"
           else
